@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <limits>
+#include <vector>
 
 #include "alc_planner/path_planner.hpp"
 
@@ -112,6 +113,46 @@ TEST(PathPlanner, UnknownCells) {
         planner.computeDist(pos(0.5f, 2.5f), pos(4.5f, 2.5f), map);
     EXPECT_TRUE(std::isfinite(dist));
     EXPECT_GT(dist, 4.0f);
+}
+
+TEST(PathPlanner, ZeroSaliencyOverlayDoublesCost) {
+    const auto map = buildGrid(20, 20, 1.0f);
+    std::vector<float> overlay(map.data.size(), 0.0f);
+    PathPlanner planner;
+
+    const float dist =
+        planner.computeDist(pos(0.5f, 0.5f), pos(5.5f, 0.5f), map, &overlay);
+    EXPECT_NEAR(dist, 10.0f, 1e-4f);
+}
+
+TEST(PathPlanner, UnitSaliencyOverlayMatchesStandardAStar) {
+    const auto map = buildGrid(20, 20, 1.0f);
+    std::vector<float> overlay(map.data.size(), 1.0f);
+    PathPlanner planner;
+
+    const float standard_dist =
+        planner.computeDist(pos(0.5f, 0.5f), pos(5.5f, 0.5f), map);
+    const float weighted_dist =
+        planner.computeDist(pos(0.5f, 0.5f), pos(5.5f, 0.5f), map, &overlay);
+    EXPECT_NEAR(weighted_dist, standard_dist, 1e-4f);
+}
+
+TEST(PathPlanner, SaliencyWeightedAStarPrefersLowerTotalWeightedCost) {
+    const auto map = buildGrid(5, 3, 1.0f);
+    std::vector<float> overlay(map.data.size(), 0.0f);
+    const int width = static_cast<int>(map.info.width);
+
+    for (int col = 0; col < width; ++col) {
+        overlay[static_cast<std::size_t>(0 * width + col)] = 1.0f;
+    }
+    overlay[static_cast<std::size_t>(1 * width + 0)] = 1.0f;
+    overlay[static_cast<std::size_t>(1 * width + 4)] = 1.0f;
+
+    PathPlanner planner;
+    const float dist =
+        planner.computeDist(pos(0.5f, 1.5f), pos(4.5f, 1.5f), map, &overlay);
+    EXPECT_GT(dist, 4.0f);
+    EXPECT_LT(dist, 8.0f);
 }
 
 }  // namespace alc_planner

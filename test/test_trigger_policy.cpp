@@ -12,7 +12,7 @@ namespace
 
 ALCCandidate makeCandidate(const float reward) {
     ALCCandidate candidate;
-    candidate.tau_id = 7;
+    candidate.tau_ix = 7;
     candidate.reward = reward;
     return candidate;
 }
@@ -100,7 +100,7 @@ TEST(SLAMGraphPlanner, EvaluateWithTriggerReturnsCandidate) {
         planner.onEvaluationComplete(makeCandidate(0.8f), 0.0, 1.0f);
 
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result->tau_id, 7);
+    EXPECT_EQ(result->tau_ix, 7);
     EXPECT_EQ(planner.state(), PlannerState::NAVIGATING_TO_ALC);
 }
 
