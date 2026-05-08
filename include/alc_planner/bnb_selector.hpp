@@ -19,12 +19,14 @@ public:
 
     std::optional<ALCCandidate> select(
         std::vector<ALCCandidate> candidates, const GraphState& graph,
+        const SaliencyState& saliency_state,
         const nav_msgs::msg::OccupancyGrid& map) const;
 
 private:
     Params params_;
     RewardEvaluator evaluator_;
     PathPlanner path_planner_;
+    mutable std::vector<float> saliency_overlay_scratch_;
 };
 
 }  // namespace alc_planner

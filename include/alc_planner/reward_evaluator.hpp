@@ -10,9 +10,11 @@ class RewardEvaluator
 public:
     explicit RewardEvaluator(Params params);
 
-    void fillRewardUB(ALCCandidate& candidate, const GraphState& graph) const;
+    void fillRewardUB(ALCCandidate& candidate,
+                      const SaliencyState& saliency_state) const;
 
-    void fillReward(ALCCandidate& candidate, const GraphState& graph) const;
+    void fillReward(ALCCandidate& candidate,
+                    const SaliencyState& saliency_state) const;
 
 private:
     Params params_;

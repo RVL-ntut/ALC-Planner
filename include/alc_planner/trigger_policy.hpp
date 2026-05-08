@@ -10,9 +10,8 @@ class TriggerPolicy
 public:
     explicit TriggerPolicy(Params params);
 
-    [[nodiscard]]
-    bool shouldTriggerALC(float reward, double elapsed_seconds,
-                          float coverage_ratio) const;
+    [[nodiscard]] bool shouldTriggerALC(float reward, double elapsed_seconds,
+                                        float coverage_ratio) const;
 
 private:
     Params params_;
