@@ -32,7 +32,6 @@ add_library(alc_planner_core
   src/core/saliency_evaluator.cpp
   src/core/uncertainty_metrics.cpp
   src/core/candidate_builder.cpp
-  src/core/plc_estimator.cpp
   src/core/reward_evaluator.cpp
   src/core/bnb_selector.cpp
   src/core/path_planner.cpp
@@ -102,6 +101,12 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_reward_evaluator test/test_reward_evaluator.cpp)
   target_link_libraries(test_reward_evaluator alc_planner_core)
+
+  ament_add_gtest(test_path_planner test/test_path_planner.cpp)
+  target_link_libraries(test_path_planner alc_planner_core)
+
+  ament_add_gtest(test_bnb_selector test/test_bnb_selector.cpp)
+  target_link_libraries(test_bnb_selector alc_planner_core)
 endif()
 
 ament_package()

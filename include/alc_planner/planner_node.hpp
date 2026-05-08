@@ -6,7 +6,9 @@
 #include <rtabmap_msgs/msg/map_data.hpp>
 
 #include <memory>
+#include <optional>
 
+#include "alc_planner/bnb_selector.hpp"
 #include "alc_planner/candidate_builder.hpp"
 #include "alc_planner/reward_evaluator.hpp"
 #include "alc_planner/saliency_evaluator.hpp"
@@ -36,9 +38,11 @@ private:
     SaliencyEvaluator saliency_eval_;
     CandidateBuilder candidate_builder_;
     RewardEvaluator reward_evaluator_;
+    BNBSelector bnb_selector_;
     GraphState graph_;
     nav_msgs::msg::OccupancyGrid::SharedPtr occupancy_map_;
     std::vector<ALCCandidate> candidates_;
+    std::optional<ALCCandidate> best_candidate_;
     Pose6f last_lighthouse_pose_;
     bool has_lighthouse_ = false;
     rclcpp::Time last_map_data_stamp_{0, 0, RCL_ROS_TIME};

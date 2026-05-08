@@ -54,7 +54,8 @@ ALCPlannerNode::ALCPlannerNode(const rclcpp::NodeOptions& opts)
     : rclcpp::Node("alc_planner", opts),
       saliency_eval_(params_),
       candidate_builder_(params_),
-      reward_evaluator_(params_) {
+      reward_evaluator_(params_),
+      bnb_selector_(params_) {
     sub_map_data_ = create_subscription<rtabmap_msgs::msg::MapData>(
         "/rtabmap/mapData", rclcpp::SystemDefaultsQoS(),
         std::bind(&ALCPlannerNode::onMapData, this, std::placeholders::_1));
@@ -79,6 +80,18 @@ void ALCPlannerNode::onMapData(
     candidates_ = candidate_builder_.build(graph_);
     for (auto& candidate : candidates_) {
         reward_evaluator_.fillRewardUB(candidate, graph_);
+    }
+    best_candidate_.reset();
+    if (occupancy_map_ && graph_.robot_node_id >= 0) {
+        best_candidate_ =
+            bnb_selector_.select(candidates_, graph_, *occupancy_map_);
+        if (best_candidate_.has_value()) {
+            RCLCPP_INFO(
+                get_logger(),
+                "[ALCPlanner] BNB best: tau_id=%d reward=%.4f map_dist=%.2f",
+                best_candidate_->tau_id, best_candidate_->reward,
+                best_candidate_->map_dist);
+        }
     }
     last_map_data_stamp_ = msg->header.stamp;
     logGraphState();
