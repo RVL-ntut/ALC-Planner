@@ -30,6 +30,7 @@ public:
     PlannerState state() const;
 
 private:
+    Params params_;
     TriggerPolicy trigger_;
     PlannerState state_ = PlannerState::EVALUATING;
 };

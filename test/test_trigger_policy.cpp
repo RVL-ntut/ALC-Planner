@@ -12,7 +12,9 @@ namespace
 
 ALCCandidate makeCandidate(const float reward) {
     ALCCandidate candidate;
-    candidate.tau_ix = 7;
+    candidate.tau_ix = 20;
+    candidate.P_lc = 1.0f;
+    candidate.map_dist = 5.0f;
     candidate.reward = reward;
     return candidate;
 }
@@ -100,7 +102,7 @@ TEST(SLAMGraphPlanner, EvaluateWithTriggerReturnsCandidate) {
         planner.onEvaluationComplete(makeCandidate(0.8f), 0.0, 1.0f);
 
     ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result->tau_ix, 7);
+    EXPECT_EQ(result->tau_ix, 20);
     EXPECT_EQ(planner.state(), PlannerState::NAVIGATING_TO_ALC);
 }
 
@@ -113,6 +115,85 @@ TEST(SLAMGraphPlanner, EvaluateWithoutTriggerReturnsNullopt) {
     SLAMGraphPlanner planner(params);
     const auto result =
         planner.onEvaluationComplete(makeCandidate(0.2f), 0.0, 1.0f);
+
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
+}
+
+TEST(SLAMGraphPlanner, TauFloorSuppressesNearCandidate) {
+    Params params;
+    params.theta_max = 0.1f;
+    params.lambda_decay = 0.0f;
+    params.alpha_cov = 0.0f;
+    params.tau_min_revisit = 15;
+    params.plc_min_revisit = 0.0f;
+
+    SLAMGraphPlanner planner(params);
+    auto candidate = makeCandidate(1.0f);
+    candidate.tau_ix = 8;
+    candidate.P_lc = 0.9f;
+
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
+
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
+}
+
+TEST(SLAMGraphPlanner, PlcFloorSuppressesLowProbabilityCandidate) {
+    Params params;
+    params.theta_max = 0.1f;
+    params.lambda_decay = 0.0f;
+    params.alpha_cov = 0.0f;
+    params.tau_min_revisit = 0;
+    params.plc_min_revisit = 0.05f;
+
+    SLAMGraphPlanner planner(params);
+    auto candidate = makeCandidate(1.0f);
+    candidate.tau_ix = 72;
+    candidate.P_lc = 0.019f;
+
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
+
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
+}
+
+TEST(SLAMGraphPlanner, CandidatePassingFloorsCanStillTrigger) {
+    Params params;
+    params.theta_max = 0.1f;
+    params.lambda_decay = 0.0f;
+    params.alpha_cov = 0.0f;
+    params.tau_min_revisit = 15;
+    params.plc_min_revisit = 0.05f;
+
+    SLAMGraphPlanner planner(params);
+    auto candidate = makeCandidate(1.0f);
+    candidate.tau_ix = 31;
+    candidate.P_lc = 0.31f;
+
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
+
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result->tau_ix, 31);
+    EXPECT_EQ(planner.state(), PlannerState::NAVIGATING_TO_ALC);
+}
+
+TEST(SLAMGraphPlanner, MapDistFloorSuppressesNearbyCandidate) {
+    Params params;
+    params.theta_max = 0.1f;
+    params.lambda_decay = 0.0f;
+    params.alpha_cov = 0.0f;
+    params.tau_min_revisit = 15;
+    params.plc_min_revisit = 0.05f;
+    params.map_dist_min_revisit = 1.0f;
+
+    SLAMGraphPlanner planner(params);
+    auto candidate = makeCandidate(1.0f);
+    candidate.tau_ix = 42;
+    candidate.P_lc = 0.7f;
+    candidate.map_dist = 0.365f;
+
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::EVALUATING);

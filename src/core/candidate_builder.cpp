@@ -105,6 +105,11 @@ std::vector<ALCCandidate> CandidateBuilder::build(
                 ? saliency_state.keyframes[static_cast<std::size_t>(rep_ix)]
                       .is_lighthouse
                 : false;
+        candidate.best_plc_intrinsic =
+            rep_ix < static_cast<int>(saliency_state.keyframes.size())
+                ? saliency_state.keyframes[static_cast<std::size_t>(rep_ix)]
+                      .plc_intrinsic
+                : 0.0f;
         candidates.push_back(std::move(candidate));
     }
 

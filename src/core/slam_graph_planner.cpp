@@ -4,12 +4,18 @@ namespace alc_planner
 {
 
 SLAMGraphPlanner::SLAMGraphPlanner(Params params)
-    : trigger_(std::move(params)) {}
+    : params_(params), trigger_(std::move(params)) {}
 
 std::optional<ALCCandidate> SLAMGraphPlanner::onEvaluationComplete(
     const std::optional<ALCCandidate>& best, const double elapsed_seconds,
     const float coverage_ratio) {
     if (state_ != PlannerState::EVALUATING || !best.has_value()) {
+        return std::nullopt;
+    }
+
+    if (best->tau_ix < params_.tau_min_revisit ||
+        best->P_lc < params_.plc_min_revisit ||
+        best->map_dist < params_.map_dist_min_revisit) {
         return std::nullopt;
     }
 

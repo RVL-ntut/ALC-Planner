@@ -73,6 +73,7 @@ struct ALCCandidate
     float reward = 0.0f;
     float reward_ub = 0.0f;
     bool is_lighthouse = false;
+    float best_plc_intrinsic = 0.0f;
 };
 
 struct Params
@@ -91,6 +92,9 @@ struct Params
     float theta_max = 0.5f;
     float lambda_decay = 0.01f;
     float alpha_cov = 0.3f;
+    int tau_min_revisit = 15;
+    float plc_min_revisit = 0.05f;
+    float map_dist_min_revisit = 1.0f;
     bool use_variance_uncertainty = false;
 };
 
