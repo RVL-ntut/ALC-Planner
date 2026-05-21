@@ -8,12 +8,12 @@ SLAMGraphPlanner::SLAMGraphPlanner(Params params)
 
 std::optional<ALCCandidate> SLAMGraphPlanner::onEvaluationComplete(
     const std::optional<ALCCandidate>& best, const double elapsed_seconds,
-    const float coverage_ratio) {
+    const float coverage_ratio, const int robot_ix) {
     if (state_ != PlannerState::EVALUATING || !best.has_value()) {
         return std::nullopt;
     }
 
-    if (best->tau_ix < params_.tau_min_revisit ||
+    if (std::max(0, robot_ix - best->tau_ix) < params_.tau_min_revisit ||
         best->P_lc < params_.plc_min_revisit ||
         best->map_dist < params_.map_dist_min_revisit) {
         return std::nullopt;

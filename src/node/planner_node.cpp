@@ -134,7 +134,7 @@ void ALCPlannerNode::onMapData(
                                : (now() - last_alc_time_).seconds();
     const float coverage_ratio = computeCoverageRatio();
     const auto to_navigate = slam_graph_planner_.onEvaluationComplete(
-        best_candidate_, elapsed, coverage_ratio);
+        best_candidate_, elapsed, coverage_ratio, graph_.robot_ix);
     if (to_navigate.has_value()) {
         sendNavGoal(*to_navigate);
     }

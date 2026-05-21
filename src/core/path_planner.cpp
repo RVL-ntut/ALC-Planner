@@ -67,11 +67,12 @@ float PathPlanner::computeDist(
     const auto isFree = [&](const GridCell& cell) {
         const int8_t value =
             map.data[static_cast<std::size_t>(toIndex(cell, width))];
-        return value >= 0 && value <= kOccupiedThreshold;
+        return value <= kOccupiedThreshold;
     };
-    if (!isFree(start_cell) || !isFree(goal_cell)) {
-        return std::numeric_limits<float>::infinity();
-    }
+    // Start and goal bypass the occupancy check: the 3D→2D projection can
+    // place the robot or a revisit target inside an occupied cell due to
+    // resolution mismatch or sensor self-returns. Only interior path cells
+    // must be free.
 
     std::vector<float> g_costs(static_cast<std::size_t>(cell_count),
                                std::numeric_limits<float>::infinity());
@@ -104,11 +105,14 @@ float PathPlanner::computeDist(
         for (const auto& offset : kNeighborOffsets) {
             const GridCell neighbor{current_cell.row + offset[0],
                                     current_cell.col + offset[1]};
-            if (!inBounds(neighbor, width, height) || !isFree(neighbor)) {
+            if (!inBounds(neighbor, width, height)) {
                 continue;
             }
 
             const int neighbor_index = toIndex(neighbor, width);
+            if (!isFree(neighbor) && neighbor_index != goal_index) {
+                continue;
+            }
             float weight = 1.0f;
             if (saliency_overlay != nullptr &&
                 static_cast<std::size_t>(neighbor_index) <

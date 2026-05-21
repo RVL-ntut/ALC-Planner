@@ -99,7 +99,7 @@ TEST(SLAMGraphPlanner, EvaluateWithTriggerReturnsCandidate) {
 
     SLAMGraphPlanner planner(params);
     const auto result =
-        planner.onEvaluationComplete(makeCandidate(0.8f), 0.0, 1.0f);
+        planner.onEvaluationComplete(makeCandidate(0.8f), 0.0, 1.0f, 40);
 
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result->tau_ix, 20);
@@ -114,7 +114,7 @@ TEST(SLAMGraphPlanner, EvaluateWithoutTriggerReturnsNullopt) {
 
     SLAMGraphPlanner planner(params);
     const auto result =
-        planner.onEvaluationComplete(makeCandidate(0.2f), 0.0, 1.0f);
+        planner.onEvaluationComplete(makeCandidate(0.2f), 0.0, 1.0f, 40);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
@@ -133,7 +133,8 @@ TEST(SLAMGraphPlanner, TauFloorSuppressesNearCandidate) {
     candidate.tau_ix = 8;
     candidate.P_lc = 0.9f;
 
-    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
+    // robot_ix=20: gap = 20 - 8 = 12 < 15, candidate suppressed
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f, 20);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
@@ -152,7 +153,7 @@ TEST(SLAMGraphPlanner, PlcFloorSuppressesLowProbabilityCandidate) {
     candidate.tau_ix = 72;
     candidate.P_lc = 0.019f;
 
-    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f, 80);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
@@ -171,7 +172,8 @@ TEST(SLAMGraphPlanner, CandidatePassingFloorsCanStillTrigger) {
     candidate.tau_ix = 31;
     candidate.P_lc = 0.31f;
 
-    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
+    // robot_ix=50: gap = 50 - 31 = 19 >= 15, candidate passes tau floor
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f, 50);
 
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result->tau_ix, 31);
@@ -193,7 +195,8 @@ TEST(SLAMGraphPlanner, MapDistFloorSuppressesNearbyCandidate) {
     candidate.P_lc = 0.7f;
     candidate.map_dist = 0.365f;
 
-    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f);
+    // robot_ix=60: gap = 60 - 42 = 18 >= 15, suppressed by map_dist_min_revisit
+    const auto result = planner.onEvaluationComplete(candidate, 0.0, 1.0f, 60);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
@@ -203,7 +206,7 @@ TEST(SLAMGraphPlanner, EvaluateWithNoBestReturnsNullopt) {
     Params params;
     SLAMGraphPlanner planner(params);
 
-    const auto result = planner.onEvaluationComplete(std::nullopt, 0.0, 1.0f);
+    const auto result = planner.onEvaluationComplete(std::nullopt, 0.0, 1.0f, 40);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::EVALUATING);
@@ -216,11 +219,11 @@ TEST(SLAMGraphPlanner, NoReentrantNavWhileNavigating) {
     params.alpha_cov = 0.0f;
 
     SLAMGraphPlanner planner(params);
-    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f)
+    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f, 40)
                     .has_value());
 
     const auto result =
-        planner.onEvaluationComplete(makeCandidate(0.6f), 0.0, 1.0f);
+        planner.onEvaluationComplete(makeCandidate(0.6f), 0.0, 1.0f, 40);
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::NAVIGATING_TO_ALC);
 }
@@ -232,7 +235,7 @@ TEST(SLAMGraphPlanner, NavSuccessTransitionsToRotating) {
     params.alpha_cov = 0.0f;
 
     SLAMGraphPlanner planner(params);
-    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f)
+    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f, 40)
                     .has_value());
 
     EXPECT_TRUE(planner.onNavigationResult(true));
@@ -246,7 +249,7 @@ TEST(SLAMGraphPlanner, NavFailTransitionsToEvaluating) {
     params.alpha_cov = 0.0f;
 
     SLAMGraphPlanner planner(params);
-    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f)
+    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f, 40)
                     .has_value());
 
     EXPECT_FALSE(planner.onNavigationResult(false));
@@ -268,7 +271,7 @@ TEST(SLAMGraphPlanner, RotationCompleteResetsToEvaluating) {
     params.alpha_cov = 0.0f;
 
     SLAMGraphPlanner planner(params);
-    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f)
+    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f, 40)
                     .has_value());
     ASSERT_TRUE(planner.onNavigationResult(true));
 
@@ -283,13 +286,13 @@ TEST(SLAMGraphPlanner, FullCycleCanTriggerAgain) {
     params.alpha_cov = 0.0f;
 
     SLAMGraphPlanner planner(params);
-    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f)
+    ASSERT_TRUE(planner.onEvaluationComplete(makeCandidate(0.5f), 0.0, 1.0f, 40)
                     .has_value());
     ASSERT_TRUE(planner.onNavigationResult(true));
     planner.onRotationComplete();
 
     const auto result =
-        planner.onEvaluationComplete(makeCandidate(0.6f), 0.0, 1.0f);
+        planner.onEvaluationComplete(makeCandidate(0.6f), 0.0, 1.0f, 40);
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(planner.state(), PlannerState::NAVIGATING_TO_ALC);
 }

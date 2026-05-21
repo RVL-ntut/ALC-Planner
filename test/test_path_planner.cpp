@@ -111,8 +111,32 @@ TEST(PathPlanner, UnknownCells) {
     PathPlanner planner;
     const float dist =
         planner.computeDist(pos(0.5f, 2.5f), pos(4.5f, 2.5f), map);
+    // Unknown cells (-1) are treated as passable, so the path goes straight
+    // through the unknown cell rather than detouring around it.
     EXPECT_TRUE(std::isfinite(dist));
-    EXPECT_GT(dist, 4.0f);
+    EXPECT_NEAR(dist, 4.0f, 1e-4f);
+}
+
+TEST(PathPlanner, StartOnOccupiedCell) {
+    auto map = buildGrid(5, 5, 1.0f);
+    setCell(map, 0, 0, 100);  // start cell is occupied
+
+    PathPlanner planner;
+    const float dist =
+        planner.computeDist(pos(0.5f, 0.5f), pos(4.5f, 4.5f), map);
+    // Start/goal bypass occupancy check: 3D→2D projection may place the robot
+    // inside an occupied cell due to resolution mismatch or sensor self-returns.
+    EXPECT_TRUE(std::isfinite(dist));
+}
+
+TEST(PathPlanner, GoalOnOccupiedCell) {
+    auto map = buildGrid(5, 5, 1.0f);
+    setCell(map, 4, 4, 100);  // goal cell is occupied
+
+    PathPlanner planner;
+    const float dist =
+        planner.computeDist(pos(0.5f, 0.5f), pos(4.5f, 4.5f), map);
+    EXPECT_TRUE(std::isfinite(dist));
 }
 
 TEST(PathPlanner, ZeroSaliencyOverlayDoublesCost) {

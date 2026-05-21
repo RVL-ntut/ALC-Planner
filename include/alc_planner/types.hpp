@@ -57,6 +57,13 @@ struct SaliencyState
     float plc_calibration = 1.0f;
 };
 
+enum class MapDistSource : std::uint8_t
+{
+    ASTAR = 0,
+    EUCLIDEAN_FALLBACK = 1,
+    UNAVAILABLE = 2,
+};
+
 struct ALCCandidate
 {
     int tau_ix = -1;
@@ -66,6 +73,7 @@ struct ALCCandidate
     float graph_dist = 0.0f;
     float graph_dist_var = 0.0f;
     float map_dist = 0.0f;
+    MapDistSource map_dist_source = MapDistSource::UNAVAILABLE;
     float P_lc = 0.0f;
     float delta_U = 0.0f;
     float delta_U_ub = 0.0f;

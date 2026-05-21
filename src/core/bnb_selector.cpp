@@ -42,8 +42,15 @@ std::optional<ALCCandidate> BNBSelector::select(
             robot_pos, candidate.rep_pose.position, map,
             saliency_overlay_scratch_.empty() ? nullptr
                                               : &saliency_overlay_scratch_);
-        if (!std::isfinite(candidate.map_dist)) {
-            continue;
+        if (std::isfinite(candidate.map_dist)) {
+            candidate.map_dist_source = MapDistSource::ASTAR;
+        } else {
+            // Grid path unavailable (robot or target in dense occupied region
+            // due to 3D→2D projection). Use Euclidean distance as a lower-bound
+            // approximation so delta_U = graph_dist - map_dist stays positive
+            // and the reward signal remains meaningful.
+            candidate.map_dist = candidate.euclidean_dist;
+            candidate.map_dist_source = MapDistSource::EUCLIDEAN_FALLBACK;
         }
 
         evaluator_.fillReward(candidate, saliency_state);

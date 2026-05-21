@@ -125,21 +125,29 @@ TEST(BNBSelector, SingleCandidateReachable) {
     EXPECT_EQ(nodeIdFromTau(graph, *best), 1);
 }
 
-TEST(BNBSelector, SingleCandidateUnreachable) {
+TEST(BNBSelector, SingleCandidateGridBlockedFallsBackToEuclidean) {
     Params params;
     auto [graph, saliency_state] = makeGraph();
+    // Robot at (0.5, 0.5), candidate at (4.5, 4.5) → euclidean ≈ 5.657
     const int tau_ix = addNode(graph, saliency_state, 1,
                                Eigen::Vector3f(4.5f, 4.5f, 0.0f), 0.8f);
+    const float graph_dist = 8.0f;
     std::vector<ALCCandidate> candidates = {
-        makeCandidate(graph, tau_ix, 8.0f, {tau_ix})};
+        makeCandidate(graph, tau_ix, graph_dist, {tau_ix})};
     fillRewardUBs(candidates, params, graph, saliency_state);
 
+    // A full vertical wall at col=2 blocks the grid path. BnB falls back to
+    // euclidean_dist so delta_U = graph_dist - euclidean_dist stays positive.
     auto map = buildFreeGrid(10, 10, 1.0f);
-    setCell(map, 4, 4, 100);
+    for (int row = 0; row < 10; ++row) {
+        setCell(map, row, 2, 100);
+    }
 
     BNBSelector selector(params);
-    EXPECT_FALSE(
-        selector.select(candidates, graph, saliency_state, map).has_value());
+    const auto best = selector.select(candidates, graph, saliency_state, map);
+    ASSERT_TRUE(best.has_value());
+    const float expected_euclidean = std::sqrt(4.0f * 4.0f + 4.0f * 4.0f);
+    EXPECT_NEAR(best->map_dist, expected_euclidean, 1e-3f);
 }
 
 TEST(BNBSelector, TwoCandidatesHigherRewardWins) {
@@ -186,7 +194,7 @@ TEST(BNBSelector, PruningWorks) {
     EXPECT_EQ(nodeIdFromTau(graph, *best), 1);
 }
 
-TEST(BNBSelector, AllUnreachable) {
+TEST(BNBSelector, AllGridBlockedFallsBackToGraph) {
     Params params;
     auto [graph, saliency_state] = makeGraph();
     const int tau1_ix = addNode(graph, saliency_state, 1,
@@ -199,13 +207,18 @@ TEST(BNBSelector, AllUnreachable) {
     };
     fillRewardUBs(candidates, params, graph, saliency_state);
 
+    // Full vertical wall at col=2 blocks all grid paths. BnB falls back to
+    // graph_dist for both and selects the higher-reward candidate.
     auto map = buildFreeGrid(12, 12, 1.0f);
-    setCell(map, 4, 4, 100);
-    setCell(map, 5, 5, 100);
+    for (int row = 0; row < 12; ++row) {
+        setCell(map, row, 2, 100);
+    }
 
     BNBSelector selector(params);
-    EXPECT_FALSE(
-        selector.select(candidates, graph, saliency_state, map).has_value());
+    const auto best = selector.select(candidates, graph, saliency_state, map);
+    ASSERT_TRUE(best.has_value());
+    // tau1 has higher plc_intrinsic (0.8 > 0.7) so it wins on reward.
+    EXPECT_EQ(nodeIdFromTau(graph, *best), 1);
 }
 
 TEST(BNBSelector, MixedReachability) {
